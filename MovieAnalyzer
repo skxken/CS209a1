@@ -42,11 +42,18 @@ public class MovieAnalyzer {
             this.Stars[3]=Star[3];
             Arrays.sort(this.Stars);
         }
+        public boolean HasGenre(String genre)
+        {
+            for(int i=0;i<Genre_list.size();i++)
+                if(Genre_list.get(i).equals(genre))
+                    return true;
+            return false;
+        }
     }
     public static ArrayList<Movie> movies=new ArrayList<>();
     public MovieAnalyzer(String dataset_path)
     {
-        try (BufferedReader infile = new BufferedReader(new FileReader(dataset_path)))
+        try (InputStreamReader isr = new InputStreamReader(new FileInputStream(dataset_path), "UTF-8"); BufferedReader infile=new BufferedReader(isr))
         {
             String line;
             String[] parts;
@@ -75,7 +82,7 @@ public class MovieAnalyzer {
                 else
                     gross=Integer.parseInt(income);
                 movies.add(new Movie(parts[1].replace("\"",""),Integer.parseInt(parts[2].replace("\"","")),parts[3],Integer.parseInt(parts[4].split(" ")[0].replace("\"","")),
-                        Double.parseDouble(parts[6].replace("\"","")),meta_score,parts[9],Integer.parseInt(parts[14].replace("\"","")),gross,Overview));
+                        Float.parseFloat(parts[6].replace("\"","")),meta_score,parts[9],Integer.parseInt(parts[14].replace("\"","")),gross,Overview));
                 for(int i=0;i< genre.length;i++)
                     movies.get(movies.size()-1).AddGenre(genre[i]);
                 movies.get(movies.size()-1).AddStar(stars);
@@ -185,10 +192,75 @@ public class MovieAnalyzer {
     }
     public List<String> getTopStars(int top_k, String by)
     {
-        return null;
+        Map<String,Double> m1=new HashMap<>();
+        Map<String,Double> m2=new HashMap<>();
+        for(int i=0;i<movies.size();i++)
+        {
+            for(int j=0;j<4;j++) {
+                if (!m2.containsKey(movies.get(i).Stars[j])) {
+                    if (by.equals("rating")) {
+                        m2.put(movies.get(i).Stars[j], 1.0);
+                        m1.put(movies.get(i).Stars[j], movies.get(i).IMDB_Rating);
+                    } else {
+                        if (movies.get(i).Gross == 0)
+                            continue;
+                        m2.put(movies.get(i).Stars[j], 1.0);
+                        m1.put(movies.get(i).Stars[j], 1.0 * movies.get(i).Gross);
+                    }
+                } else {
+                    if (by.equals("rating")) {
+                        double num = m2.get(movies.get(i).Stars[j]);
+                        m2.put(movies.get(i).Stars[j], num + 1);
+                        num = m1.get(movies.get(i).Stars[j]);
+                        m1.put(movies.get(i).Stars[j], num + movies.get(i).IMDB_Rating);
+                    } else {
+                        if (movies.get(i).Gross == 0)
+                            continue;
+                        double num = m2.get(movies.get(i).Stars[j]);
+                        m2.put(movies.get(i).Stars[j], num + 1);
+                        num = m1.get(movies.get(i).Stars[j]);
+                        m1.put(movies.get(i).Stars[j], num + 1.0 * movies.get(i).Gross);
+                    }
+                }
+            }
+        }
+        Map<String,Double> nodes=new HashMap<>();
+        for (Map.Entry<String, Double> entry : m1.entrySet()) {
+            String mapKey = entry.getKey();
+            Double mapValue = entry.getValue();
+            nodes.put(mapKey,mapValue/m2.get(mapKey));
+        }
+        Map<String,Double> nodes1=nodes.entrySet()
+                .stream()
+                .sorted((e1, e2) -> {
+                    if (e1.getValue().equals(e2.getValue())) {
+                        return e1.getKey().compareTo(e2.getKey());
+                    } else {
+                        return e2.getValue().compareTo(e1.getValue());
+                    }
+                })
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+        ArrayList<String> ans=new ArrayList<>();
+        int cnt=0;
+        for (Map.Entry<String, Double> entry : nodes1.entrySet()) {
+            cnt++;
+            if(cnt>top_k)
+                break;
+            ans.add(entry.getKey());
+            //System.out.println(entry.getKey()+" "+entry.getValue());
+        }
+        return ans;
     }
     public List<String> searchMovies(String genre, float min_rating, int max_runtime)
     {
-        return null;
+        List<String> lis=new ArrayList<>();
+        for(int i=0;i< movies.size();i++)
+        {
+            if(movies.get(i).HasGenre(genre)&&movies.get(i).IMDB_Rating>=min_rating&&movies.get(i).Runtime<=max_runtime)
+                lis.add(movies.get(i).Series_Title);
+        }
+        lis.sort(String::compareTo);
+        return lis;
     }
 }
