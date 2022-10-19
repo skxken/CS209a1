@@ -1,0 +1,75 @@
+import java.util.*;
+import java.io.*;
+public class MovieAnalyzer {
+    public static class Movie
+    {
+        private String Series_Title;
+        private int Released_Year;
+        private String Certificate;
+        private int Runtime;
+        private ArrayList<String> Genre_list=new ArrayList<>();
+        private int IMDB_Rating;
+        private int Meta_score;
+        private String Director;
+        private String[] Stars;
+        private int No_of_Votes;
+        private int Gross;
+        public Movie(String Series_Title,int Released_Year,String Certificate,int Runtime,int IMDB_Rating,int Meta_score,
+                     String Director,String[] Stars,int No_of_Votes,int Gross)
+        {
+            this.Series_Title=Series_Title;
+            this.Released_Year=Released_Year;
+            this.Certificate=Certificate;
+            this.Runtime=Runtime;
+            this.IMDB_Rating=IMDB_Rating;
+            this.Meta_score=Meta_score;
+            this.Director=Director;
+            this.Stars=Stars;
+            this.No_of_Votes=No_of_Votes;
+            this.Gross=Gross;
+        }
+        public void AddGenre(String genre)
+        {
+            Genre_list.add(genre);
+        }
+    }
+    public static ArrayList<Movie> movies=new ArrayList<>();
+    public MovieAnalyzer(String dataset_path)
+    {
+        try (BufferedReader infile = new BufferedReader(new FileReader(dataset_path)))
+        {
+            String line;
+            String[] parts;
+            String[] genre;
+            String[] stars=new String[5];
+            String income;
+            int meta_score;
+            int gross;
+            line=infile.readLine();
+            while ((line = infile.readLine()) != null)
+            {
+                parts = line.split(",(?=([^\\\"]*\\\"[^\\\"]*\\\")*[^\\\"]*$)",-1);
+                genre=parts[5].replace("\"", "").split(", ");
+                stars[0]=parts[10];stars[1]=parts[11];stars[2]=parts[12];stars[3]=parts[13];
+                income=parts[15].replace(",","");
+                if(parts[8].length()==0)
+                    meta_score=0;
+                else
+                    meta_score=Integer.parseInt(parts[8]);
+                if(income.length()==0)
+                    gross=0;
+                else
+                    gross=Integer.parseInt(income);
+                movies.add(new Movie(parts[1],Integer.parseInt(parts[2]),parts[3],Integer.parseInt(parts[4].split(" ")[0]),
+                        Integer.parseInt(parts[6]),meta_score,parts[9],stars,Integer.parseInt(parts[14]),gross));
+                for(int i=0;i< genre.length;i++)
+                    movies.get(movies.size()-1).AddGenre(genre[i]);
+            }
+        }
+        catch (IOException e)
+        {
+            System.err.println("Fatal error: " + e.getMessage());
+        }
+    }
+
+}
